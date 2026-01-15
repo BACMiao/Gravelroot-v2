@@ -1,0 +1,17 @@
+django:Template:0
+flask:render_template_string:0
+jinja2:Template:0
+jinja2:from_string:1
+mako:Template:0
+mako:render:1
+tornado:Template:0
+tornado:generate:1
+chameleon:PageTemplate:0
+chameleon:PageTemplateFile:0
+django:from_string:0
+ldap3:search:1
+ldap:search_s:1
+ldap:filter_format:1
+lxml:xpath:0
+xml:find:0
+xml:findall:0

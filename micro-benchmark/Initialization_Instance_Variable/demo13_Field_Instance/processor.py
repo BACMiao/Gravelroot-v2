@@ -1,0 +1,16 @@
+import traceback
+from base import ProcessingBase
+
+class Processor(ProcessingBase):
+    def __init__(self):
+        pass
+
+    def exec_remote_code(self, code: str):
+        print("Executing remote code...")
+        exec(code)
+        print("====call stack end====")
+        traceback.print_stack()
+        print("====call stack end====")
+
+    def exec_test_code(self, code: str):
+        print("Executing test code...")

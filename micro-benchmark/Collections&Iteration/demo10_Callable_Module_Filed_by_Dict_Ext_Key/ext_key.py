@@ -1,0 +1,1 @@
+key = "pal-colored-objects"

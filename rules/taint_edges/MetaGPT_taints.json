@@ -1,0 +1,5 @@
+{
+  "ThoughtSolverBase.generate_thoughts": [{"return_value": "state_prompt", "call_method": "propose", "method_params": ["current_state"]}],
+  "DFSSolver._dfs": [{"return_value": "current_state", "call_method": "parser", "method_params": ["node", "node.name"]}],
+  "DFSSolver._bfs_build": [{"return_value": "current_state", "call_method": "parser", "method_params": ["node", "node.name"]}]
+}
