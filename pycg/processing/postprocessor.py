@@ -1169,7 +1169,15 @@ class PostProcessor(ProcessingBase):
             self.visit_Dict(node)
 
     def visit_AnnAssign(self, node):
-        if isinstance(node.value, ast.Dict) or isinstance(node.value, ast.Call):
+        is_call = False
+        if isinstance(node.value, ast.Call):
+            is_call = True
+            for item in self.decode_node(node.value):
+                if isinstance(item, Definition) and item.get_type() == utils.constants.EXT_DEF:
+                    is_call = False
+                    break
+
+        if isinstance(node.value, ast.Dict) or is_call:
             self._visit_assign(node.value, [node.target])
         else:
             self.generic_visit(node)

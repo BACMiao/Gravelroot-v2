@@ -168,7 +168,7 @@ class CallGraphGenerator(object):
         for root, dirs, files in os.walk(self.package):
             if any(x in root for x in
                    ('paper_experiments', 'tests', 'benchmark', 'venv', 'WareHouse/', 'testevals/', 'benchmarks',
-                    'examples', 'test/', 'camel/test', 'scripts', 'llama_datasets')):
+                    'examples', 'test/', 'camel/test', 'llama_datasets')):
                 # if any(x in root for x in ('venv/', 'WareHouse/')):
                 continue
             for file in files:

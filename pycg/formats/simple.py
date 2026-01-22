@@ -357,13 +357,13 @@ class Simple(BaseFormatter):
                         return
                     for index, field_set in sink_cls_defi.get_name_pointer().get_args().items():
                         for field_defi_name in field_set:
-                            potent_type_set = self.def_manager.get(field_defi_name).get_potent_type()
-                            if parent_classes & potent_type_set:
-                                print('Condition: ')
-                                condi_path = 'Field Initialization: ' + field_defi_name + ' -> ' + pre_node
-                                condition_path.append(condi_path)
-                                print(condi_path)
-                                return
+                            if field_defi:=self.def_manager.get(field_defi_name):
+                                if parent_classes & field_defi.get_potent_type():
+                                    print('Condition: ')
+                                    condi_path = 'Field Initialization: ' + field_defi_name + ' -> ' + pre_node
+                                    condition_path.append(condi_path)
+                                    print(condi_path)
+                                    return
                 return
             path = []
 
