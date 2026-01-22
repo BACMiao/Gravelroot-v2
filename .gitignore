@@ -167,3 +167,4 @@ cython_debug/
 micro-benchmark/*_test.py
 micro-benchmark-key-errs/*_test.py
 ._*
+.DS_Store

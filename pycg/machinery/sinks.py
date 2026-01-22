@@ -18,6 +18,7 @@ class SinkManager(Resource):
         self.extra_mods = []
         self.class_re_context = dict()
         self.hierarchy_graph = ClassInheritanceGraph()
+        self.exist_meth_to_mods = set()
         self.exist_mods = set()
         self.no_super_add = set()
         self.need_context = dict()
@@ -55,6 +56,13 @@ class SinkManager(Resource):
     def add_exist_mod(self, mod):
         if mod not in self.exist_mods:
             self.exist_mods.add(mod)
+
+    def get_exist_meth_to_mods(self):
+        return self.exist_meth_to_mods
+
+    def add_exist_meth_to_mod(self, mod):
+        if mod not in self.exist_meth_to_mods:
+            self.exist_meth_to_mods.add(mod)
 
     def get_extra_mods(self):
         return self.extra_mods
@@ -261,13 +269,25 @@ class SinkManager(Resource):
         delete_sinks = set()
         for potent_sink_mod, potent_sink_message in self.sinks.items():
             delete_methods = set()
+            delete_methods2 = set()
             for method_name, import_mods in potent_sink_message['sink_module_user'].items():
                 for import_mod in import_mods:
-                    if import_mod in self.exist_mods:
+                    if import_mod in self.exist_meth_to_mods:
                         break
                     delete_methods.add(method_name)
+            for method_name, callee_mgs in potent_sink_message['sink_method_user'].items():
+                for callee in callee_mgs['callee']:
+                    if callee.split(':')[0] in self.exist_mods:
+                        if method_name in delete_methods2:
+                            delete_methods2.remove(method_name)
+                        break
+                    delete_methods2.add(method_name)
+
             for delete_method in delete_methods:
                 potent_sink_message['sink_module_user'].pop(delete_method)
+
+            for delete_method in delete_methods2:
+                potent_sink_message['sink_method_user'].pop(delete_method)
 
             if len(potent_sink_message['sink_module_user']) == 0 and len(potent_sink_message['sink_method_user']) == 0:
                 delete_sinks.add(potent_sink_mod)
@@ -355,7 +375,7 @@ class SinkManager(Resource):
                             not_match_sink.clear()
                             break
 
-                if not not_match_sink:
+                if not not_match_sink or sink_root_method_name not in sink_method_user:
                     continue
                 loop_message = sink_method_user[sink_root_method_name]
                 find_loop = [sink_root_mod_name + '.' + sink_root_method_name]

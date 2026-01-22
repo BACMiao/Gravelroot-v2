@@ -23,6 +23,7 @@ import time
 import yaml
 import json
 
+from collections import deque
 from pathlib import Path
 from pycg import utils
 from pycg.machinery.callgraph import CallGraph
@@ -65,6 +66,7 @@ class CallGraphGenerator(object):
         self.operation = operation
         self.import_chain = []
         self.location_messages = {"sup_class": dict(), "import_message": dict()}
+        self.analyzed_queue = deque(maxlen=10)
         self.setUp()
 
     def setUp(self):
@@ -166,7 +168,7 @@ class CallGraphGenerator(object):
         for root, dirs, files in os.walk(self.package):
             if any(x in root for x in
                    ('paper_experiments', 'tests', 'benchmark', 'venv', 'WareHouse/', 'testevals/', 'benchmarks',
-                    'examples', 'test/', 'camel/test', 'scripts')):
+                    'examples', 'test/', 'camel/test', 'scripts', 'llama_datasets')):
                 # if any(x in root for x in ('venv/', 'WareHouse/')):
                 continue
             for file in files:
@@ -326,6 +328,7 @@ class CallGraphGenerator(object):
             self.middle_manager,
             self.sink_manager,
             self.import_chain,
+            self.analyzed_queue,
             self.code_contents,
             self.save_if_stmt,
             self.save_loop_stmt

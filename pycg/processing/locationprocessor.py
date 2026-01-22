@@ -44,6 +44,7 @@ class LocationProcessor(ProcessingBase):
         self.have_return = False
         self.taint_variables = []
         self.taint_field = []
+        self.is_assign_stmt = False
 
     def analyze_submodule(self, modname):
         super().analyze_submodule(
@@ -90,11 +91,14 @@ class LocationProcessor(ProcessingBase):
                 if src_name in self.sink_manager.get_resource_modules():
                     self.find_sink_module(src_name, None)
                 elif "." in src_name and src_name.split(".")[0] in self.sink_manager.get_resource_modules():
+                    mod_name = src_name.split(".")[0]
+                    if mod_name in ['os']:
+                        continue
                     if tgt_name:
-                        self.find_sink_module(src_name.split(".")[0], tgt_name)
-                        self.location_messages["import_message"].setdefault(tgt_name, set()).add(src_name.split(".")[0])
+                        self.find_sink_module(mod_name, tgt_name)
+                        self.location_messages["import_message"].setdefault(tgt_name, set()).add(mod_name)
                     else:
-                        self.find_sink_module(src_name.split(".")[0], src_name.split(".")[-1])
+                        self.find_sink_module(mod_name, src_name.split(".")[-1])
 
                 self.location_messages["import_message"].setdefault(tgt_name, set()).add(src_name)
                 continue
@@ -206,6 +210,7 @@ class LocationProcessor(ProcessingBase):
         if method_name:
             sink_node = self.sink_manager.get_node(self.modname)
             sink_node['sink_module_user'].setdefault(method_name, set()).add(module_name)
+            self.sink_manager.add_exist_mod(module_name)
 
     def find_sink_method(self, method_name):
         if self.modname not in self.sink_manager.get_nodes():
@@ -218,7 +223,9 @@ class LocationProcessor(ProcessingBase):
             init_temp = {'callee': set(), 'caller': set()}
             sink_node['sink_method_user'].setdefault(self.current_ns, init_temp)['callee'].add(sink_value)
             sink_root_node['sink_method_user'].setdefault(self.current_ns, {'callee': set()})['callee'].add(sink_value)
-            self.sink_manager.add_exist_mod(sink_module)
+            self.sink_manager.add_exist_meth_to_mod(sink_module)
+            if sink_module in '<builtin>':
+                self.sink_manager.add_exist_mod(sink_module)
 
     def visit_For(self, node):
         try:
@@ -283,7 +290,7 @@ class LocationProcessor(ProcessingBase):
         call_obj = None
         if hasattr(node.func, 'value'):
             func_id = getattr(node.func.value, 'id', getattr(node.func.value, 'attr', None))
-            self.add_sink_module_user(func_id)
+            self.add_sink_module_user(func_id, method_name)
             receiver = func_id
 
             if hasattr(node.func.value, 'value') and hasattr(node.func.value.value, 'id'):
@@ -449,8 +456,8 @@ class LocationProcessor(ProcessingBase):
             return self.taint_edge(arg_node.value)
         elif isinstance(arg_node, ast.Name) and arg_node.id == 'self':
             return True
-        elif isinstance(arg_node, ast.Name) and 'sqlalchemy' in (self.func_local_messages.get(arg_node.id) or ''):
-            return False
+        # elif isinstance(arg_node, ast.Name) and 'sqlalchemy' in (self.func_local_messages.get(arg_node.id) or ''):
+        #     return False
         else:
             try:
                 arg_names = ast.unparse(arg_node)
@@ -466,13 +473,15 @@ class LocationProcessor(ProcessingBase):
                     return True
 
     def visit_Assign(self, node):
+        self.is_assign_stmt = True
         self._visit_assign(node.value, node.targets)
+        self.is_assign_stmt = False
 
     def _visit_assign(self, value, targets):
         self.visit(value)
 
         if isinstance(value, ast.Name):
-            self.add_sink_module_user(value.id)
+            self.add_sink_module_user(value.id, None)
 
         if self.taint_edge(value):
             for target in targets:
@@ -523,11 +532,14 @@ class LocationProcessor(ProcessingBase):
         self.have_return = True
 
         if hasattr(node.value, 'id'):
-            self.add_sink_module_user(node.value.id)
+            self.add_sink_module_user(node.value.id, None)
         self.visit(node.value)
 
-    def add_sink_module_user(self, potent_module):
-        if not potent_module:
+    def add_sink_module_user(self, potent_module, method_name):
+        resource_methods = self.sink_manager.get_resource_methods()
+        if not potent_module or (not self.is_assign_stmt and method_name not in resource_methods):
+            return
+        if method_name and potent_module in ['os'] and method_name not in resource_methods:
             return
         sink_node = self.sink_manager.get_node(self.modname)
         module_name_set = self.location_messages['import_message'].get(potent_module)

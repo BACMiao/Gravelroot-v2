@@ -19,6 +19,7 @@ class ImportProcessor(ProcessingBase):
             middle_manager,
             sink_manager,
             import_chain,
+            analyzed_queue,
             code_contents,
             save_if_stmt,
             save_loop_stmt,
@@ -38,6 +39,7 @@ class ImportProcessor(ProcessingBase):
         self.sink_manager = sink_manager
         self.current_class = []
         self.import_chain = import_chain
+        self.analyzed_queue = analyzed_queue
         self.code_contents = code_contents
         self.save_if_stmt = save_if_stmt
         self.save_loop_stmt = save_loop_stmt
@@ -69,6 +71,7 @@ class ImportProcessor(ProcessingBase):
             self.middle_manager,
             self.sink_manager,
             self.import_chain,
+            self.analyzed_queue,
             self.code_contents,
             self.save_if_stmt,
             self.save_loop_stmt,
@@ -76,6 +79,11 @@ class ImportProcessor(ProcessingBase):
         )
 
     def visit_Module(self, node):
+        if self.modname in self.analyzed_queue:
+            return
+        else:
+            self.analyzed_queue.append(self.modname)
+
         self.import_manager.set_current_mod(self.modname, self.filename)
 
         mod = self.module_manager.get(self.modname)
@@ -304,10 +312,10 @@ class ImportProcessor(ProcessingBase):
                 sink_node['sink_module_user'].setdefault(sink_module_user, set()).update(value)
                 self.sink_manager.add_potent_module_node(sink_module_user, value)
 
-        # for key, value in self.sink_method_field.items():
-        #     for sink_module_user in fields.get(key) or {}:
-        #         init_temp = {'callee': set(), 'caller': set()}
-        #         sink_node['sink_method_user'].setdefault(sink_module_user, init_temp)['callee'].update(value)
+        for key, value in self.sink_method_field.items():
+            for sink_module_user in fields.get(key) or {}:
+                init_temp = {'callee': set(), 'caller': set()}
+                sink_node['sink_method_user'].setdefault(sink_module_user, init_temp)['callee'].update(value)
 
         prefix = self.modname + '.' + current_class + '.'
         for sup_class, super_mod in module_node['sup_classes'].items():

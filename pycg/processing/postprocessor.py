@@ -1189,6 +1189,11 @@ class PostProcessor(ProcessingBase):
                 if not init_def:
                     defi = self.def_manager.get(current_scope.get_ns())
                     pos = len(defi.get_name_pointer().get_pos_names())
+                    for _pos, _values in defi.get_name_pointer().get_args().items():
+                        if (ann_def and ann_def.get_ns() in _values) or node.target.id in _values:
+                            pos = _pos
+                            break
+
                     if ann_def:
                         defi.get_name_pointer().add_pos_arg(pos, None, ann_def.get_ns())
                     else:
