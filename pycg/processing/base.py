@@ -801,8 +801,6 @@ class ProcessingBase(ast.NodeVisitor):
                     if node.attr in name:
                         continue
                     ext_name = utils.join_ns(name, node.attr)
-                    if not self.def_manager.get(ext_name):
-                        self.def_manager.create(ext_name, utils.constants.EXT_DEF, name)
                     names.add(ext_name)
         return names
 
@@ -1092,6 +1090,7 @@ class ProcessingBase(ast.NodeVisitor):
                 if not self.def_manager.get(ctx_meth_name) and ori_type == utils.constants.FUN_DEF:
                     defi = self.def_manager.create(ctx_meth_name, ori_type, ori_defi.get_module_name())
                     ori_defi.add_context_def(defi)
+                    self.init_ctx_defi_args(defi, ori_defi)
                     if ori_defi not in ori_defi.get_context_def():
                         ori_defi.add_context_def(ori_defi)
                 elif getattr(self, "closured", None) and self.closured.get(ctx_meth_name, None):
@@ -1109,11 +1108,13 @@ class ProcessingBase(ast.NodeVisitor):
             parent = self.def_manager.get(item)
             if parent and parent.get_type() == utils.constants.EXT_DEF:
                 ext_names.add(ns)
-
-        for name in ext_names:
-            self.def_manager.create(name, utils.constants.EXT_DEF, self.modname)
-            self.add_ext_mod_node(name)
         return ext_names
+
+    def init_ctx_defi_args(self, ctx_defi, ori_defi):
+        pos = 0
+        for key, args in ori_defi.get_name_pointer().get_args().items():
+            ctx_defi.get_name_pointer().add_pos_arg(pos, key, args)
+            pos += 1
 
     def add_ext_mod_node(self, name):
         ext_modname = name.split(".")[0]

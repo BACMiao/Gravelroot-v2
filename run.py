@@ -3,7 +3,9 @@ import json
 import subprocess
 from pathlib import Path
 
-agent_names = ['pandas-ai', 'vanna', 'Adala', 'camel', 'AgentForge', 'MetaGPT', 'ChatDev', 'aider', 'autogen', 'AutoGPT', 'AgentGPT', 'gpt-engineer', 'SuperAGI', 'OpenHands']
+agent_names = ['pandas-ai', 'vanna', 'Adala', 'camel', 'AgentForge', 'MetaGPT', 'ChatDev', 'aider', 'autogen',
+               'AutoGPT', 'AgentGPT', 'gpt-engineer', 'SuperAGI', 'OpenHands', 'SWE-agent', 'OpenAgents', 'llama_index',
+               'letta', 'open-interpreter', 'Langchain']
 sink_rules = ['RCE', 'SQLi', 'SSTI', 'ID']
 base_dir = "/data/OpenAgentBenchmarks/"
 sinks_dir = "/root/Gravelroot/rules/sink_files"
@@ -13,10 +15,12 @@ python_env = "/root/venv/bin/python"
 current_dir = os.path.dirname(os.path.abspath(__file__))
 result_dir = os.path.join(current_dir, "path_result")
 
+
 def read_config(file_path):
     with open(file_path, 'r') as file:
         config = json.load(file)
     return config
+
 
 for agent_name in agent_names:
     project_path = os.path.join(base_dir, agent_name)

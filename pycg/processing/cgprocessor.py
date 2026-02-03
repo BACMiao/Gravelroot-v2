@@ -406,7 +406,12 @@ class CallGraphProcessor(ProcessingBase):
                 self.call_graph.add_edge(caller, pointer, node.end_lineno)
             pointer_def = self.def_manager.get(pointer)
             if not pointer_def or not isinstance(pointer_def, Definition):
-                if ':' in pointer:
+                splits = pointer.split('.')
+                if splits[-1] in self.sink_manager.get_resource_methods():
+                    if splits[0] in self.sink_manager.get_resource_methods()[splits[-1]]:
+                        pointer = splits[0] + '.' + splits[-1]
+                        self.call_graph.add_edge(caller, pointer, node.end_lineno)
+                elif ':' in pointer:
                     self.call_graph.add_edge(caller, pointer, node.end_lineno)
                 continue
             pointer_mod_name = pointer_def.get_module_name()

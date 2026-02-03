@@ -23,7 +23,6 @@ import time
 import yaml
 import json
 
-from collections import deque
 from pathlib import Path
 from pycg import utils
 from pycg.machinery.callgraph import CallGraph
@@ -50,6 +49,7 @@ from pycg.utils.common import trans_frozenset_to_dict
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 
+
 class CallGraphGenerator(object):
     def __init__(self, entry_points, sink_points, package, name, max_iter, operation):
         self.entry_points = entry_points
@@ -66,7 +66,6 @@ class CallGraphGenerator(object):
         self.operation = operation
         self.import_chain = []
         self.location_messages = {"sup_class": dict(), "import_message": dict()}
-        self.analyzed_queue = deque(maxlen=10)
         self.setUp()
 
     def setUp(self):
@@ -168,7 +167,9 @@ class CallGraphGenerator(object):
         for root, dirs, files in os.walk(self.package):
             if any(x in root for x in
                    ('paper_experiments', 'tests', 'benchmark', 'venv', 'WareHouse/', 'testevals/', 'benchmarks',
-                    'examples', 'test/', 'camel/test', 'llama_datasets')):
+                    'examples', 'test/', 'camel/test', 'llama_datasets', 'letta/benchmark',
+                    'open-interpreter/scripts', 'langchain_experimental')):
+                # 'open-interpreter/interpreter/terminal_interface')):
                 # if any(x in root for x in ('venv/', 'WareHouse/')):
                 continue
             for file in files:
@@ -328,7 +329,6 @@ class CallGraphGenerator(object):
             self.middle_manager,
             self.sink_manager,
             self.import_chain,
-            self.analyzed_queue,
             self.code_contents,
             self.save_if_stmt,
             self.save_loop_stmt

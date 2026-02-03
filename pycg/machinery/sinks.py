@@ -216,8 +216,8 @@ class SinkManager(Resource):
                 seen_methods.add(potent_method)
                 if potent_method in sink_module["caller_message"]:
                     for caller_method in sink_module["caller_message"][potent_method]:
-                        if caller_method.startswith(potent_method) and '.' not in potent_method: #todo
-                            continue
+                        # if caller_method.startswith(potent_method) and '.' not in potent_method: #todo
+                        #     continue
                         if '#' not in caller_method:
                             potent_methods.setdefault(caller_method, init_temp)['callee'].add(
                                 modname + ':' + potent_method)

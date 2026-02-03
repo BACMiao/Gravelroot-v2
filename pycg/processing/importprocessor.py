@@ -19,7 +19,6 @@ class ImportProcessor(ProcessingBase):
             middle_manager,
             sink_manager,
             import_chain,
-            analyzed_queue,
             code_contents,
             save_if_stmt,
             save_loop_stmt,
@@ -39,7 +38,6 @@ class ImportProcessor(ProcessingBase):
         self.sink_manager = sink_manager
         self.current_class = []
         self.import_chain = import_chain
-        self.analyzed_queue = analyzed_queue
         self.code_contents = code_contents
         self.save_if_stmt = save_if_stmt
         self.save_loop_stmt = save_loop_stmt
@@ -71,7 +69,6 @@ class ImportProcessor(ProcessingBase):
             self.middle_manager,
             self.sink_manager,
             self.import_chain,
-            self.analyzed_queue,
             self.code_contents,
             self.save_if_stmt,
             self.save_loop_stmt,
@@ -79,10 +76,6 @@ class ImportProcessor(ProcessingBase):
         )
 
     def visit_Module(self, node):
-        if self.modname in self.analyzed_queue:
-            return
-        else:
-            self.analyzed_queue.append(self.modname)
 
         self.import_manager.set_current_mod(self.modname, self.filename)
 
@@ -716,6 +709,8 @@ class ImportProcessor(ProcessingBase):
             if self.current_ns not in messages:
                 messages.append(self.current_ns)
             return
+        elif method_name == 'cls':
+            get_module.get_caller_messages().setdefault(current_class_name, []).append(self.current_ns)
         elif receiver_mod and final_save_class and method_name:
             receiver_module = self.module_manager.get(receiver_mod)
             if method_name.startswith(final_save_class):
