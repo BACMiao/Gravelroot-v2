@@ -30,10 +30,8 @@ for agent_name in agent_names:
     for sink_rule in sink_rules:
         sinks_file = sinks_dir + '/' + sink_rule + '-sinks'
         _sink_rule = sink_rule.lower()
-        out_json_file = os.path.join(result_dir, f'{agent_name}-path-output-{_sink_rule}.json')
-        old_json_file = f'{output_base_dir}{agent_name}-path-output-{_sink_rule}.json'
-
-        log_file = os.path.join(result_dir, f"{agent_name}-{sink_rule}.log")
+        out_json_file = os.path.join(result_dir, agent_name, f'path-output-{_sink_rule}.json')
+        log_file = os.path.join(result_dir, agent_name, f"{sink_rule}.log")
 
         command = [
             python_env, "-m", "pycg",
@@ -45,6 +43,9 @@ for agent_name in agent_names:
 
         print(f"  ➡ Running with sinks: {sink_rule}")
         print(' '.join(command))
+        dir_name = os.path.dirname(log_file)
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
         with open(log_file, "w") as log:
             result = subprocess.run(command, stdout=log, stderr=log, text=True)
             if result.returncode == 0:

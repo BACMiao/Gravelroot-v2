@@ -56,7 +56,7 @@ def main():
     )
 
     parser.add_argument("--as-graph-output", help="Output for the assignment graph", default=None)
-    parser.add_argument("-o", "--output", help="Output path", default=f'../path_result/[P_NAME]-path-output.json')
+    parser.add_argument("-o", "--output", help="Output path", default=f'../path_result/[P_NAME]/path-output.json')
 
     args = parser.parse_args()
 

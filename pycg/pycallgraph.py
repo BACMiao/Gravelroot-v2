@@ -66,6 +66,7 @@ class CallGraphGenerator(object):
         self.operation = operation
         self.import_chain = []
         self.location_messages = {"sup_class": dict(), "import_message": dict()}
+        self.sink_rule = self.sink_points.rsplit('/', 1)[1].split('-')[0].lower()
         self.setUp()
 
     def setUp(self):
@@ -168,7 +169,7 @@ class CallGraphGenerator(object):
             if any(x in root for x in
                    ('paper_experiments', 'tests', 'benchmark', 'venv', 'WareHouse/', 'testevals/', 'benchmarks',
                     'examples', 'test/', 'camel/test', 'llama_datasets', 'letta/benchmark',
-                    'open-interpreter/scripts', 'langchain_experimental')):
+                    'open-interpreter/scripts')):
                 # 'open-interpreter/interpreter/terminal_interface')):
                 # if any(x in root for x in ('venv/', 'WareHouse/')):
                 continue
@@ -277,6 +278,12 @@ class CallGraphGenerator(object):
         with open(taints_path, "r", encoding="utf-8") as f:
             return json.load(f)
 
+    def merge_and_write_output(self, parent_dir, output_data, filename):
+        file_path = os.path.join(parent_dir, 'path_result', self.project_name, filename)
+        new_data = trans_frozenset_to_dict(output_data)
+        with open(file_path, "w") as f:
+            f.write(json.dumps(new_data, indent=4))
+
     def analyze(self):
         total_start_time = time.time()
         self.sink_manager.set_resource_methods(self.load_sink_points())
@@ -337,12 +344,8 @@ class CallGraphGenerator(object):
         import_end_time = time.time()
         print(f"import processor-1 execution time: {import_end_time - import_start_time} seconds")
 
-        if_stmt_output = trans_frozenset_to_dict(self.save_if_stmt)
-        with open(f'{parent_dir}/path_result/{self.project_name}-if-output.json', "w+") as f:
-            f.write(json.dumps(if_stmt_output))
-        loop_stmt_output = trans_frozenset_to_dict(self.save_loop_stmt)
-        with open(f'{parent_dir}/path_result/{self.project_name}-loop-output.json', "w+") as f:
-            f.write(json.dumps(loop_stmt_output))
+        self.merge_and_write_output(parent_dir, self.save_if_stmt, f'if-output-{self.sink_rule}.json')
+        self.merge_and_write_output(parent_dir, self.save_loop_stmt, f'loop-output-{self.sink_rule}.json')
 
         print("start import processor-2")
         import_start_time = time.time()
@@ -364,9 +367,7 @@ class CallGraphGenerator(object):
             elif meth_name not in middle_node['potent_method']:
                 self.save_middle.pop(_middle)
 
-        middle_output = trans_frozenset_to_dict(self.save_middle)
-        with open(f'{parent_dir}/path_result/{self.project_name}-middle-output.json', "w+") as f:
-            f.write(json.dumps(middle_output))
+        self.merge_and_write_output(parent_dir, self.save_middle, f'middle-output-{self.sink_rule}.json')
 
         print("start pre processor")
         pre_start_time = time.time()
