@@ -84,6 +84,7 @@ class ImportProcessor(ProcessingBase):
             mod = self.module_manager.create(self.modname, self.filename)
         get_sink = self.sink_manager.get_node(self.modname)
         if get_sink:
+            self.sink_manager.mark_analyzed_as_sink(self.modname)
             self.sink_manager.update_caller_message(self.modname, mod.get_caller_messages())
         elif self.modname in self.middle_manager.get_nodes():
             self.middle_manager.update_caller_message(self.modname, mod.get_caller_messages())
@@ -108,7 +109,8 @@ class ImportProcessor(ProcessingBase):
         self.import_names.clear()
         self.have_all_init = False
         self.import_chain.pop()
-        self.modules_analyzed = self.modules_analyzed - self.sink_manager.get_nodes().keys()
+        sink_not_yet_analyzed = self.sink_manager.get_nodes().keys() - self.sink_manager.get_analyzed_as_sink()
+        self.modules_analyzed = self.modules_analyzed - sink_not_yet_analyzed
         self.sink_manager.transitive_single_potent_method(self.modname)
 
     def visit_ImportFrom(self, node):
@@ -153,6 +155,7 @@ class ImportProcessor(ProcessingBase):
                     imported_name in self.import_chain
                     and imported_name not in analyzed_import
                     and imported_name in self.sink_manager.get_nodes()
+                    and imported_name not in self.sink_manager.get_analyzed_as_sink()
                     and not fname.endswith('__init__.py')
             ):
                 self.get_modules_analyzed().remove(imported_name)

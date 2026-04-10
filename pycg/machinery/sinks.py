@@ -24,6 +24,7 @@ class SinkManager(Resource):
         self.need_context = dict()
         self.super_object_dict = dict()
         self.load_taints = dict()
+        self.analyzed_as_sink = set()
         super().__init__()
 
     def set_load_taints(self, taints):
@@ -49,6 +50,12 @@ class SinkManager(Resource):
 
     def add_no_super_add(self, modname):
         self.no_super_add.add(modname)
+
+    def mark_analyzed_as_sink(self, modname):
+        self.analyzed_as_sink.add(modname)
+
+    def get_analyzed_as_sink(self):
+        return self.analyzed_as_sink
 
     def get_exist_mods(self):
         return self.exist_mods

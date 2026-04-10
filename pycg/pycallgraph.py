@@ -344,8 +344,8 @@ class CallGraphGenerator(object):
         import_end_time = time.time()
         print(f"import processor-1 execution time: {import_end_time - import_start_time} seconds")
 
-        self.merge_and_write_output(parent_dir, self.save_if_stmt, f'if-output-{self.sink_rule}.json')
-        self.merge_and_write_output(parent_dir, self.save_loop_stmt, f'loop-output-{self.sink_rule}.json')
+        # self.merge_and_write_output(parent_dir, self.save_if_stmt, f'if-output-{self.sink_rule}.json')
+        # self.merge_and_write_output(parent_dir, self.save_loop_stmt, f'loop-output-{self.sink_rule}.json')
 
         print("start import processor-2")
         import_start_time = time.time()
@@ -367,7 +367,7 @@ class CallGraphGenerator(object):
             elif meth_name not in middle_node['potent_method']:
                 self.save_middle.pop(_middle)
 
-        self.merge_and_write_output(parent_dir, self.save_middle, f'middle-output-{self.sink_rule}.json')
+        # self.merge_and_write_output(parent_dir, self.save_middle, f'middle-output-{self.sink_rule}.json')
 
         print("start pre processor")
         pre_start_time = time.time()
