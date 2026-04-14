@@ -274,7 +274,7 @@ class ImportProcessor(ProcessingBase):
                 for sup_sink_method, sink_set in sup_user_message.items():
                     if sup_sink_method == base_name or sup_sink_method not in self.sink_manager.get_no_super_add():
                         continue
-                    ss_meth_name = sup_sink_method.replace(base_name + '.', '')
+                    ss_meth_name = sup_sink_method.split('.', 1)[1] if '.' in sup_sink_method else sup_sink_method
                     if not node.name + '.' + ss_meth_name in get_module.get_classes_and_methods():
                         sub_meth = self.current_ns + '.' + ss_meth_name
                         if not cur_sink_node:
@@ -614,6 +614,14 @@ class ImportProcessor(ProcessingBase):
                                   or sig_caller_cls == sig_callee_cls))
                     ):
                         continue
+                    if call_self:
+                        callee_entry = self.sink_manager.get_node(callee_mod)['sink_method_user'].get(method_name, {})
+                        origins = callee_entry.get('origin', set())
+                        if origins and not any(
+                            sig_caller_cls == oc or self.hierarchy_graph.is_subclass(sig_caller_cls, oc)
+                            for oc in origins
+                        ):
+                            continue
                     callee_smu = self.sink_manager.get_node(callee_mod)['sink_method_user']
                     call_message = callee_smu.setdefault(method_name, {'callee': set(), 'caller': set()})
                     if method_name.endswith('__init__'):
@@ -939,6 +947,12 @@ class ImportProcessor(ProcessingBase):
                 if sink_scope == 'method':
                     sup_call_message = sink_node['sink_method_user'].setdefault(sup_method, init_temp)
                     sup_call_message['callee'].add(modname + ':' + sub_method)
+                    child_entry = self.sink_manager.get_node(modname)['sink_method_user'].get(sub_method, {})
+                    child_origins = child_entry.get('origin', set())
+                    if child_origins:
+                        sup_call_message.setdefault('origin', set()).update(child_origins)
+                    else:
+                        sup_call_message.setdefault('origin', set()).add(modname + '.' + current_class)
                     self.find_call_super_method(sup_method, internal_modules[module_name], sup_call_message)
                     self.sink_manager.add_potent_method_node(sup_method, {module_name})
                     sup_method_name = module_name + ':' + sup_method
