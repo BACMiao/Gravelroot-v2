@@ -134,9 +134,9 @@ class ImportProcessor(ProcessingBase):
             tgt_name = import_item.asname if import_item.asname else import_item.name  # as *
             imported_name = self.import_manager.handle_import(src_name, level)
             if not imported_name:
-                prefix = self.modname.split('.', 1)[0]
-                if not src_name.startswith(prefix):
-                    imported_name = self.import_manager.handle_import(prefix + '.' + src_name, level)
+                mod_prefix = self.modname.split('.', 1)[0]
+                if not src_name.startswith(mod_prefix):
+                    imported_name = self.import_manager.handle_import(mod_prefix + '.' + src_name, level)
             ori_imported_name = imported_name
             if not imported_name:
                 imported_name = src_name.replace('.' + tgt_name, '')

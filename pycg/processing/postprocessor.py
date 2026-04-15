@@ -102,13 +102,14 @@ class PostProcessor(ProcessingBase):
         field_anno_cls = None
         if isinstance(node.func, ast.Attribute):
             re_decode = self.decode_node(node.func.value)
+            sink_mod = self.sink_manager.get_node(self.modname)
             for re in re_decode:
                 if re.get_type() == utils.constants.CLS_DEF:
                     re_cls = re.get_ns()
                     if not field_anno_cls or self.hierarchy_graph.is_subclass(field_anno_cls, re_cls):
                         field_anno_cls = re_cls
-                elif re.get_ns() in self.sink_manager.get_node(self.modname)['sink_field']:
-                    field_cls = self.sink_manager.get_node(self.modname)['sink_field'].get(re.get_ns())
+                elif sink_mod and re.get_ns() in sink_mod['sink_field']:
+                    field_cls = sink_mod['sink_field'].get(re.get_ns())
                     if not field_anno_cls or self.hierarchy_graph.is_subclass(field_anno_cls, field_cls):
                         field_anno_cls = field_cls
 
@@ -1191,7 +1192,7 @@ class PostProcessor(ProcessingBase):
                         ann_def.get_name_pointer().add(ann_cls_def.get_ns())
 
                 anno_type_set = self.identify_anno_class(node.annotation)
-                if anno_type_set:
+                if anno_type_set and ann_def:
                     ann_def.add_potent_type(anno_type_set)
 
                 if not init_def:

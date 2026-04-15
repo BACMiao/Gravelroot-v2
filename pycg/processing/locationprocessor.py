@@ -224,7 +224,7 @@ class LocationProcessor(ProcessingBase):
             sink_node['sink_method_user'].setdefault(self.current_ns, init_temp)['callee'].add(sink_value)
             sink_root_node['sink_method_user'].setdefault(self.current_ns, {'callee': set()})['callee'].add(sink_value)
             self.sink_manager.add_exist_meth_to_mod(sink_module)
-            if sink_module in '<builtin>':
+            if sink_module == '<builtin>':
                 self.sink_manager.add_exist_mod(sink_module)
 
     def visit_For(self, node):

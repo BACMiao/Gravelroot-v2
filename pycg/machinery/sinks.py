@@ -358,7 +358,107 @@ class SinkManager(Resource):
                 self.get_nodes().pop(sink_name)
                 continue
             add_source.append(sink_module['filename'])
+
+        # Phase 1: Detect and break ALL cycles in the callee graph.
+        # DFS from every method; if we revisit a node on the current path, break the back-edge.
+        self._break_all_callee_cycles()
+
+        # Phase 2: Iteratively remove methods whose callee became empty after cycle-breaking.
+        changed = True
+        while changed:
+            changed = False
+            for sink_name in list(self.get_nodes().keys()):
+                sink_module = self.get_node(sink_name)
+                if not sink_module:
+                    continue
+                sink_module['module'] = sink_name
+                for method_name in list(sink_module['sink_method_user'].keys()):
+                    call_message = sink_module['sink_method_user'].get(method_name)
+                    if not call_message:
+                        continue
+                    # Remove callee references whose target no longer exists in sink_method_user
+                    for callee_ref in list(call_message['callee']):
+                        if ':' in callee_ref:
+                            callee_mod, callee_method = callee_ref.split(':', 1)
+                        else:
+                            callee_mod, callee_method = sink_name, callee_ref
+                        callee_node = self.get_node(callee_mod)
+                        if callee_node and callee_method not in callee_node['sink_method_user']:
+                            call_message['callee'].discard(callee_ref)
+                        elif callee_node is None and callee_mod not in self.get_resource_modules():
+                            call_message['callee'].discard(callee_ref)
+                    if not call_message['callee']:
+                        delete_method = sink_name + ':' + method_name
+                        find_loop_methods = [delete_method]
+                        self.delete_invalid_nodes(call_message, find_loop_methods, delete_method, sink_module)
+                        sink_module['sink_method_user'].pop(method_name, None)
+                        changed = True
+                if not sink_module['sink_method_user']:
+                    self.get_nodes().pop(sink_name)
+                    if sink_module['filename'] in add_source:
+                        add_source.remove(sink_module['filename'])
+                    changed = True
+
         return add_source
+
+    def _break_all_callee_cycles(self):
+        """Detect all cycles in the callee graph and break back-edges."""
+        # States: 0 = unvisited, 1 = in current path, 2 = finished
+        state = {}
+        edges_to_break = []
+
+        def dfs(mod, method):
+            key = (mod, method)
+            if state.get(key) == 2:
+                return
+            if state.get(key) == 1:
+                # Cycle detected — the caller will record the back-edge
+                return
+            state[key] = 1
+
+            node = self.get_node(mod)
+            if not node:
+                state[key] = 2
+                return
+            entry = node.get('sink_method_user', {}).get(method)
+            if not entry:
+                state[key] = 2
+                return
+
+            for callee_ref in list(entry.get('callee', set())):
+                if ':' in callee_ref:
+                    next_mod, next_method = callee_ref.split(':', 1)
+                else:
+                    next_mod, next_method = mod, callee_ref
+                next_key = (next_mod, next_method)
+                if state.get(next_key) == 1:
+                    # Back-edge found: (mod, method) --callee--> (next_mod, next_method)
+                    edges_to_break.append((mod, method, callee_ref, next_mod, next_method))
+                else:
+                    dfs(next_mod, next_method)
+
+            state[key] = 2
+
+        for sink_name, sink_module in self.get_nodes().items():
+            for method_name in sink_module.get('sink_method_user', {}):
+                if state.get((sink_name, method_name), 0) == 0:
+                    dfs(sink_name, method_name)
+
+        # Break all back-edges
+        for src_mod, src_method, callee_ref, tgt_mod, tgt_method in edges_to_break:
+            src_node = self.get_node(src_mod)
+            if src_node:
+                src_entry = src_node['sink_method_user'].get(src_method)
+                if src_entry:
+                    src_entry['callee'].discard(callee_ref)
+            tgt_node = self.get_node(tgt_mod)
+            if tgt_node:
+                tgt_entry = tgt_node['sink_method_user'].get(tgt_method)
+                if tgt_entry:
+                    tgt_entry['caller'].discard(src_mod + ':' + src_method)
+
+        if edges_to_break:
+            print(f"Broke {len(edges_to_break)} cycle back-edge(s) in callee graph")
 
     def get_overlap_methods(self):
         # get overlap which use sink_method and sink_module
