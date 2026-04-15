@@ -317,6 +317,38 @@ class CallGraphGenerator(object):
             self.save_middle
         )
         self.sink_manager.filter_potent_sink_module()
+
+        # Post-filter: bubble every surviving sink method up to its enclosing
+        # class (and outer prefixes), and register those prefixes into
+        # potent_method_nodes. This has to happen AFTER filter_potent_sink_module
+        # (filter only recognises external sink modules in callees, so prefix
+        # entries written before filter would be wiped), and BEFORE ImportProcessor
+        # (so that caller files processed earlier than the sink's own file can
+        # still see the class in potent_method_nodes).
+        for sink_modname, sink_node in self.sink_manager.get_nodes().items():
+            leaf_methods = list(sink_node['sink_method_user'].keys())
+            for leaf_ns in leaf_methods:
+                parts = leaf_ns.split('.')
+                if len(parts) < 2:
+                    continue
+                mod_method = sink_modname + ':' + leaf_ns
+                for i in range(len(parts) - 1, 0, -1):
+                    prefix = '.'.join(parts[:i])
+                    prefix_entry = sink_node['sink_method_user'].setdefault(
+                        prefix, {'callee': set(), 'caller': set()}
+                    )
+                    prefix_entry['callee'].add(mod_method)
+                    sink_node['sink_method_user'][leaf_ns].setdefault('caller', set()).add(
+                        sink_modname + ':' + prefix
+                    )
+                    self.sink_manager.add_potent_method_node(prefix, {sink_modname})
+            # also register each leaf method itself (mirroring find_potent_sink):
+            # class methods keep the raw ns, module-level functions get a '-l' tag.
+            for leaf_ns in leaf_methods:
+                parts = leaf_ns.split('.')
+                potent_ns = leaf_ns if len(parts) >= 2 else leaf_ns + '-l'
+                self.sink_manager.add_potent_method_node(potent_ns, {sink_modname})
+
         llm_end_time = time.time()
         print(f"llm processor execution time: {llm_end_time - llm_start_time} seconds")
 

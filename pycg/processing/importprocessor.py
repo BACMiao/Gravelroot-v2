@@ -1,4 +1,5 @@
 import ast
+import importlib.util
 import re
 
 from pycg.processing.base import ProcessingBase
@@ -113,6 +114,26 @@ class ImportProcessor(ProcessingBase):
         self.modules_analyzed = self.modules_analyzed - sink_not_yet_analyzed
         self.sink_manager.transitive_single_potent_method(self.modname)
 
+    def _is_external_module(self, src_name):
+        # Probe whether src_name resolves to a module that exists outside the
+        # analysed project directory. If so, the original handle_import() failed
+        # only because of the "mod.__file__ not in mod_dir" guard — it's a real
+        # external dependency (stdlib or third-party), NOT a missing internal
+        # submodule, so the outer caller should NOT rewrite it with the project
+        # prefix (e.g. 'os' -> 'pandasai.os') as a fallback.
+        try:
+            spec = importlib.util.find_spec(src_name)
+        except (ImportError, ValueError, ModuleNotFoundError, AttributeError):
+            return False
+        except Exception:
+            return False
+        if spec is None or not spec.origin:
+            return False
+        mod_dir = getattr(self.import_manager, 'mod_dir', None)
+        if not mod_dir:
+            return False
+        return mod_dir not in spec.origin
+
     def visit_ImportFrom(self, node):
         self.visit_Import(node, prefix=node.module, level=node.level)
 
@@ -135,7 +156,7 @@ class ImportProcessor(ProcessingBase):
             imported_name = self.import_manager.handle_import(src_name, level)
             if not imported_name:
                 mod_prefix = self.modname.split('.', 1)[0]
-                if not src_name.startswith(mod_prefix):
+                if not src_name.startswith(mod_prefix) and not self._is_external_module(src_name):
                     imported_name = self.import_manager.handle_import(mod_prefix + '.' + src_name, level)
             ori_imported_name = imported_name
             if not imported_name:
