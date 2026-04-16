@@ -601,6 +601,19 @@ class Definition(object):
             return
         self.added_context_defs.add(context_def.get_ns())
         self.context_defi.add(context_def)
+        # Propagate context_def to function argument sub-attributes
+        if self.is_function_def() and ':' in context_def.get_ns():
+            ctx_prefix = context_def.get_ns().split(':')[0]
+            for arg_name, arg_ns_set in self.get_name_pointer().get_args().items():
+                for arg_ns in arg_ns_set:
+                    arg_def = self.def_manager.get(arg_ns)
+                    if not arg_def:
+                        continue
+                    context_arg_ns = ctx_prefix + ':' + arg_ns
+                    if not self.def_manager.get(context_arg_ns):
+                        context_arg_def = self.def_manager.create(
+                            context_arg_ns, utils.constants.NAME_DEF, self.get_module_name())
+                        arg_def.add_context_def(context_arg_def)
 
     def get_context_def(self):
         return self.context_defi

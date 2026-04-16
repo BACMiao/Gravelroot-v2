@@ -96,10 +96,21 @@ class Simple(BaseFormatter):
                     wo_ctx_next_node = next_node
                 if wo_ctx_next_node in self.sink_files:
                     pre_call_line = self.sink_files[wo_ctx_next_node]['call_line']
-                    if int(call_line) > int(pre_call_line):
-                        self.sink_files[wo_ctx_next_node]['call_line'] = int(call_line)
+                    # Guard against stale 'None' strings or other non-numeric
+                    # values that may have been written by older runs / upstream
+                    # edges where end_lineno was None.
+                    try:
+                        cl_int = int(call_line)
+                    except (TypeError, ValueError):
+                        cl_int = -1
+                    try:
+                        pcl_int = int(pre_call_line)
+                    except (TypeError, ValueError):
+                        pcl_int = -1
+                    if cl_int > pcl_int:
+                        self.sink_files[wo_ctx_next_node]['call_line'] = cl_int
                         if current_node in self.sink_manager.get_sink_points():
-                            self.sink_files[wo_ctx_next_node]['is_sink'].append(int(call_line))
+                            self.sink_files[wo_ctx_next_node]['is_sink'].append(cl_int)
 
                 if (next_node in add_node_set
                         or len(data[next_node]) == 0 and self.combine_node(next_node, data[current_node])):
@@ -196,8 +207,10 @@ class Simple(BaseFormatter):
                     potent_mid_method = middles[mod_name]['potent_method']
                     middle_callee = potent_mid_method[method]['callee']
                     result_callee = self.determine_skip_middle(path, node, middle_callee)
-                    self.iter_middle(path, result_callee, middles, [call_mid_method], output_cg, indent)
+                    found = self.iter_middle(path, result_callee, middles, [call_mid_method], output_cg, indent)
                     is_middle = True
+                    if found:
+                        break
                 if is_middle:
                     continue
             elif stmt and next_sink_node and next_sink_node not in stmt and '@' in stmt:

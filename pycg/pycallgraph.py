@@ -391,13 +391,28 @@ class CallGraphGenerator(object):
         import_end_time = time.time()
         print(f"import processor-2 execution time: {import_end_time - import_start_time} seconds")
 
-        for _middle in list(self.save_middle.keys()):
-            mod_name, meth_name = _middle.split('#')
-            middle_node = self.middle_manager.get_node(mod_name)
-            if not middle_node:
-                self.save_middle.pop(_middle)
-            elif meth_name not in middle_node['potent_method']:
-                self.save_middle.pop(_middle)
+        # Save sink nodes for trace_sink_chain.py
+        def _set_to_list(obj):
+            if isinstance(obj, (set, frozenset)):
+                return sorted(list(obj))
+            if isinstance(obj, dict):
+                return {k: _set_to_list(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [_set_to_list(i) for i in obj]
+            return obj
+
+        sink_nodes_path = os.path.join(parent_dir, 'path_result', self.project_name, f'sink-nodes-{self.sink_rule}.json')
+        with open(sink_nodes_path, 'w') as f:
+            json.dump(_set_to_list(self.sink_manager.get_nodes()), f, indent=4, ensure_ascii=False)
+        print(f"Sink nodes saved to {sink_nodes_path}")
+
+        # for _middle in list(self.save_middle.keys()):
+        #     mod_name, meth_name = _middle.split('#')
+        #     middle_node = self.middle_manager.get_node(mod_name)
+        #     if not middle_node:
+        #         self.save_middle.pop(_middle)
+        #     elif meth_name not in middle_node['potent_method']:
+        #         self.save_middle.pop(_middle)
 
         # self.merge_and_write_output(parent_dir, self.save_middle, f'middle-output-{self.sink_rule}.json')
 

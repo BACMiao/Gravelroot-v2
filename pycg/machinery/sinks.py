@@ -219,13 +219,11 @@ class SinkManager(Resource):
             if not new_methods:
                 break
             for potent_method in new_methods:
-                init_temp = {"callee": set(), "caller": set()}
                 seen_methods.add(potent_method)
                 if potent_method in sink_module["caller_message"]:
                     for caller_method in sink_module["caller_message"][potent_method]:
-                        # if caller_method.startswith(potent_method) and '.' not in potent_method: #todo
-                        #     continue
                         if '#' not in caller_method:
+                            init_temp = {"callee": set(), "caller": set()}
                             potent_methods.setdefault(caller_method, init_temp)['callee'].add(
                                 modname + ':' + potent_method)
                             self.add_potent_method_node(caller_method, {modname})
@@ -444,8 +442,37 @@ class SinkManager(Resource):
                 if state.get((sink_name, method_name), 0) == 0:
                     dfs(sink_name, method_name)
 
-        # Break all back-edges
-        for src_mod, src_method, callee_ref, tgt_mod, tgt_method in edges_to_break:
+        # Group back-edges by source node
+        from collections import defaultdict
+        src_back_edges = defaultdict(list)
+        for edge in edges_to_break:
+            src_key = (edge[0], edge[1])
+            src_back_edges[src_key].append(edge)
+
+        # For each source, if breaking all its back-edges would empty callee, keep one
+        actually_break = []
+        kept_count = 0
+        for src_key, edges in src_back_edges.items():
+            src_mod, src_method = src_key
+            src_node = self.get_node(src_mod)
+            if not src_node:
+                actually_break.extend(edges)
+                continue
+            src_entry = src_node.get('sink_method_user', {}).get(src_method)
+            if not src_entry:
+                actually_break.extend(edges)
+                continue
+
+            total_callee = len(src_entry.get('callee', set()))
+            if len(edges) >= total_callee:
+                # Breaking all would empty callee — keep one to preserve reachability
+                actually_break.extend(edges[1:])
+                kept_count += 1
+            else:
+                actually_break.extend(edges)
+
+        # Break selected back-edges
+        for src_mod, src_method, callee_ref, tgt_mod, tgt_method in actually_break:
             src_node = self.get_node(src_mod)
             if src_node:
                 src_entry = src_node['sink_method_user'].get(src_method)
@@ -458,7 +485,9 @@ class SinkManager(Resource):
                     tgt_entry['caller'].discard(src_mod + ':' + src_method)
 
         if edges_to_break:
-            print(f"Broke {len(edges_to_break)} cycle back-edge(s) in callee graph")
+            print(f"Broke {len(actually_break)} cycle back-edge(s) in callee graph"
+                  f" (kept {kept_count} to preserve reachability,"
+                  f" {len(edges_to_break)} total detected)")
 
     def get_overlap_methods(self):
         # get overlap which use sink_method and sink_module

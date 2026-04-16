@@ -58,6 +58,11 @@ class CallGraph(object):
         self.add_node(dest)
         if dest not in self.cg[src]:
             self.cg[src].append(dest)
+        # Some AST nodes (e.g. certain decorators/ClassDefs in older Python
+        # versions) can have end_lineno=None. str(None) becomes the literal
+        # 'None', which later crashes int() parsing in formats/simple.py.
+        if end_lineno is None:
+            end_lineno = -1
         self.re_cg[dest].add(src + '%' + str(end_lineno))
 
     def get_subsequent_edge(self, src):
